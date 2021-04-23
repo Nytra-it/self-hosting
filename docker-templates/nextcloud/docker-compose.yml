@@ -1,0 +1,51 @@
+version: '3.3'
+
+services:
+  nextcloud-db:
+    image: mariadb
+    container_name: nextcloud-db
+    command: --transaction-isolation=READ-COMMITTED --log-bin=ROW
+    restart: unless-stopped
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
+      #- /opt/containers/nextcloud/database:/var/lib/mysql
+      # Alternativ lokales Verzeichnis im selben Ordner wie die docker-compose.yml
+      - ./appdata/database:/var/lib/mysql
+    environment:
+      - MYSQL_ROOT_PASSWORD=test #SQL root Passwort eingeben
+      - MYSQL_PASSWORD=test #SQL Benutzer Passwort eingeben
+      - MYSQL_DATABASE=nextcloud #Datenbank Name
+      - MYSQL_USER=nextcloud #SQL Nutzername
+      - MYSQL_INITDB_SKIP_TZINFO=1
+    networks:
+      - default
+
+  nextcloud-redis:
+    image: redis:alpine
+    container_name: nextcloud-redis
+    hostname: nextcloud-redis
+    networks:
+        - default
+    restart: unless-stopped
+    command: redis-server --requirepass test # Redis Passwort eingeben
+
+  nextcloud-app:
+    image: nextcloud
+    container_name: nextcloud-app
+    restart: unless-stopped
+    depends_on:
+      - nextcloud-db
+      - nextcloud-redis
+    environment:
+        REDIS_HOST: nextcloud-redis
+        REDIS_HOST_PASSWORD: test # Redis Passwort von oben wieder eingeben
+    volumes:
+      #- /opt/containers/nextcloud/app:/var/www/html
+      #- /opt/containers/nextcloud/daten:/var/www/html/data
+      # Lokales Verzeichnis im selben Ordner wie die docker-compose.yml
+      - ./appdata/app:/var/www/html
+      - ./appdata/daten:/var/www/html/data
+    networks:
+      - default
+
